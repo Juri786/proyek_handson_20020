@@ -1,7 +1,7 @@
 import { createClient as createSupabase } from '@supabase/supabase-js';
 import { createClient as createRedis } from 'redis';
 
-const supabase = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const supabase = createSupabase(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
 export default async function handler(req, res) {
   const { judul } = req.query;
