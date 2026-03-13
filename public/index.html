@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koleksi Foto Saya</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f0f0; text-align: center; padding: 20px; }
+        .container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 30px; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; cursor: pointer; }
+        .card img { width: 100%; border-radius: 5px; height: 200px; object-fit: cover; }
+        .detail-box { margin-top: 10px; padding: 10px; background: #fff8f0; border-top: 1px solid #eee; text-align: left; font-size: 0.9em; position: relative; }
+        .redis-tag { position: absolute; top: 5px; right: 5px; font-size: 0.7em; color: #ccc; font-weight: bold; }
+        footer { margin-top: 50px; padding: 20px; border-top: 1px solid #ccc; font-size: 0.85em; }
+        .loading { color: #888; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <h1>Koleksi Foto Saya</h1>
+
+    <div class="container" id="catalog">
+        <p class="loading">Memuat katalog...</p>
+    </div>
+
+    <footer>
+        <p id="edge-fortune">Edge: Loading...</p>
+        <p id="serverless-fortune">Backend: Loading...</p>
+        <p><small>*Klik gambar untuk melihat detail harga dan pencipta</small></p>
+    </footer>
+
+    <script>
+        // 1. Ambil Katalog (Daftar Koleksi)
+        async function fetchCatalog() {
+            const res = await fetch('/api/get-koleksi');
+            const data = await res.json();
+            const catalogDiv = document.getElementById('catalog');
+            catalogDiv.innerHTML = '';
+
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img src="${item.path}" alt="${item.judul}">
+                    <h3>${item.judul}</h3>
+                    <div id="detail-${item.judul.replace(/\s+/g, '')}"></div>
+                `;
+                card.onclick = () => fetchDetail(item.judul);
+                catalogDiv.appendChild(card);
+            });
+        }
+
+        // 2. Ambil Detail (Pencipta, Tahun, Harga) saat diklik
+        async function fetchDetail(judul) {
+            const detailDiv = document.getElementById(`detail-${judul.replace(/\s+/g, '')}`);
+            detailDiv.innerHTML = '<p class="loading">Loading detail...</p>';
+
+            const res = await fetch(`/api/get-detail?judul=${encodeURIComponent(judul)}`);
+            const data = await res.json();
+
+            detailDiv.innerHTML = `
+                <div class="detail-box">
+                    ${data.source === 'REDIS' ? '<span class="redis-tag">REDIS</span>' : ''}
+                    <p><strong>Pencipta:</strong> ${data.pencipta}</p>
+                    <p><strong>Tahun:</strong> ${data.tahun}</p>
+                    <p><strong>Harga:</strong> Rp${new Intl.NumberFormat('id-ID').format(data.harga)}</p>
+                </div>
+            `;
+        }
+
+        // 3. Ambil Fungsi Fortune (Edge vs Serverless)
+        async function fetchFortunes() {
+            const startEdge = performance.now();
+            fetch('/api/fortune-edge').then(async r => {
+                const d = await r.json();
+                const time = Math.round(performance.now() - startEdge);
+                document.getElementById('edge-fortune').innerText = `Edge: ${d.fortune} (${time}ms)`;
+            });
+
+            const startBack = performance.now();
+            fetch('/api/fortune').then(async r => {
+                const d = await r.json();
+                const time = Math.round(performance.now() - startBack);
+                document.getElementById('serverless-fortune').innerText = `Backend: ${d.fortune} (${time}ms)`;
+            });
+        }
+
+        // Jalankan saat halaman dimuat
+        fetchCatalog();
+        fetchFortunes();
+    </script>
+</body>
+</html>
